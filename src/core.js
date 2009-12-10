@@ -441,14 +441,14 @@ jQuery.extend({
 			xhr.send( null );
 
 			function checkDone() {
-                        	if ( !requestDone && xhr && xhr.readyState === 4 ) {
-                                	requestDone = true;
+				if ( !requestDone && xhr && xhr.readyState === 4 ) {
+					requestDone = true;
 
-                                	// clear poll interval
-                                	if ( ival ) {
-                                        	clearInterval( ival );
-                                        	ival = null;
-                                	}
+					// clear poll interval
+					if ( ival ) {
+						clearInterval( ival );
+						ival = null;
+					}
 
 					execRequire( options.url, xhr.responseText );
 				}

@@ -759,3 +759,70 @@ test("jQuery.isEmptyObject", function(){
 	// What about this ?
 	// equals(true, jQuery.isEmptyObject(null), "isEmptyObject on null" );
 });
+
+asyncTest(".require() - Document Not Ready, Local", 3, function() {
+	jQuery.isReady = false;
+	jQuery.requireCache = {};
+
+	var order = [];
+
+	window.requireTest = function( num ) {
+		order.push( num );
+		equals( order.length, num, "Make sure that the results are coming in in the right order." );
+
+		if ( num === 3 ) {
+			jQuery.isReady = true;
+			start();
+		}
+	};
+
+	jQuery.require("data/require.php?wait=1&response=1");
+	jQuery.require("data/require.php?response=2");
+	jQuery.require("data/require.php?response=3");
+});
+
+asyncTest(".require() - Document Ready, Local", 3, function() {
+	jQuery.isReady = true;
+	jQuery.requireCache = {};
+
+	var order = [];
+
+	window.requireTest = function( num ) {
+		order.push( num );
+		equals( order.length, num, "Make sure that the results are coming in in the right order." );
+
+		if ( num === 3 ) {
+			start();
+		}
+	};
+
+	jQuery.require("data/require.php?wait=1&response=1");
+	jQuery.require("data/require.php?response=2");
+	jQuery.require("data/require.php?response=3");
+});
+
+asyncTest(".require() - Document Ready, Remote", 3, function() {
+	jQuery.isReady = true;
+	jQuery.requireCache = {};
+
+	var order = [], old = jQuery.isRemote;
+
+	window.requireTest = function( num ) {
+		order.push( num );
+		equals( order.length, num, "Make sure that the results are coming in in the right order." );
+
+		jQuery.isRemote = old;
+
+		if ( num === 3 ) {
+			start();
+		}
+	};
+
+	jQuery.isRemote = function(){
+		return true;
+	};
+
+	jQuery.require("data/require.php?wait=1&response=1");
+	jQuery.require("data/require.php?response=2");
+	jQuery.require("data/require.php?response=3");
+});

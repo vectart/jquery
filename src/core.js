@@ -417,8 +417,23 @@ jQuery.extend({
 		}
 	},
 	
-	require: function( options, callback ) {
-		var xhr, requestDone, ival, head, script;
+	require: function( options ) {
+		var xhr, requestDone, ival, head, script, 
+			length = arguments.length - 1,
+			callback = arguments[ length ];
+
+		if ( length > 1 ) {
+			if ( !jQuery.isFunction( callback ) ) {
+				callback = null;
+				length = arguments.length;
+			}
+			
+			for ( var i = 0; i < length; i++ ) {
+				jQuery.require( arguments[i], callback );
+			}
+
+			return;
+		}
 
 		if ( options && !options.url ) {
 			options = { url: options, success: callback };

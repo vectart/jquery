@@ -781,6 +781,29 @@ asyncTest(".require() - Document Not Ready, Local", 3, function() {
 	jQuery.require("data/require.php?response=3");
 });
 
+asyncTest(".require() - Multiple Args, Document Not Ready, Local", 3, function() {
+	jQuery.isReady = false;
+	jQuery.requireCache = {};
+
+	var order = [];
+
+	window.requireTest = function( num ) {
+		order.push( num );
+		equals( order.length, num, "Make sure that the results are coming in in the right order." );
+
+		if ( num === 3 ) {
+			jQuery.isReady = true;
+			start();
+		}
+	};
+
+	jQuery.require(
+		"data/require.php?wait=1&response=1",
+		"data/require.php?response=2",
+		"data/require.php?response=3"
+	);
+});
+
 asyncTest(".require() - Document Ready, Local", 3, function() {
 	jQuery.isReady = true;
 	jQuery.requireCache = {};

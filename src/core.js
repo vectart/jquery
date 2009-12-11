@@ -439,6 +439,8 @@ jQuery.extend({
 			options = { url: options, success: callback };
 		}
 
+		options.url = jQuery.require.urlFilter( options.url );
+
 		if ( !options || jQuery.requireCache[ options.url ] != null ) {
 			return;
 		}
@@ -465,7 +467,7 @@ jQuery.extend({
 						ival = null;
 					}
 
-					execRequire( options.url, xhr.responseText );
+					execRequire( options.url, xhr.responseText, callback );
 				}
 			}
 
@@ -500,7 +502,7 @@ jQuery.extend({
 						head.removeChild( script );
 					}
 
-					execRequire( options.url );
+					execRequire( options.url, null, callback );
 				}
 			};
 			
@@ -731,6 +733,18 @@ if ( indexOf ) {
 // All jQuery objects should point back to these
 rootjQuery = jQuery(document);
 
+jQuery.require.urlFilter = function( url ) {
+	if ( !/\./.test( url ) || (/^(\w+)./.test( url ) && !/\//.test( url )) ) {
+		url = url.replace(/^(\w+)./, function(all, name) {
+			return (jQuery.require.namespace[ name ] || name) + "/";
+		}).replace(/\./g, "/") + ".js";
+	}
+
+	return url;
+};
+
+jQuery.require.namespace = {};
+
 function readyReady() {
 	if ( jQuery.isReady && requireQueue.length === 0 ) {
 		// If there are functions bound, to execute
@@ -752,7 +766,7 @@ function readyReady() {
 	}
 }
 
-function execRequire( url, script ) {
+function execRequire( url, script, callback ) {
 	var item, i, exec = true;
 
 	jQuery.requireCache[ url ] = true;
@@ -778,6 +792,10 @@ function execRequire( url, script ) {
 		}
 	}
 
+	if ( jQuery.isFunction( callback ) ) {
+		callback();
+	}
+
 	// Check to see if all scripts have been loaded
 	for ( var script in jQuery.requireCache ) {
 		if ( jQuery.requireCache[ script ] === false ) {
@@ -788,11 +806,11 @@ function execRequire( url, script ) {
 	readyReady();
 
 	function next() {
-			if ( jQuery.isFunction( item.callback ) ) {
-				item.callback();
-			}
+		if ( jQuery.isFunction( item.callback ) ) {
+			item.callback();
+		}
 
-			requireQueue.splice( i--, 1 );
+		requireQueue.splice( i--, 1 );
 	}
 }
 

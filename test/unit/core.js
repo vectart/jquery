@@ -804,6 +804,24 @@ asyncTest(".require() - Multiple Args, Document Not Ready, Local", 3, function()
 	);
 });
 
+asyncTest(".require() - Multiple Args, Namespace, Document Not Ready, Local", 2, function() {
+	jQuery.isReady = false;
+
+	jQuery.requireCache = {};
+	jQuery.require( "data.test" );
+
+	jQuery.requireCache = {};
+	jQuery.require.namespace.foo = "data";
+	jQuery.require( "foo.test", function() {
+		jQuery.isReady = true;
+		start();
+	});
+
+	// Shouldn't run
+	jQuery.require( "foo.test" );
+});
+
+
 asyncTest(".require() - Document Ready, Local", 3, function() {
 	jQuery.isReady = true;
 	jQuery.requireCache = {};

@@ -734,7 +734,7 @@ if ( indexOf ) {
 rootjQuery = jQuery(document);
 
 jQuery.require.urlFilter = function( url ) {
-	if ( !/\./.test( url ) || (/^(\w+)./.test( url ) && !/\//.test( url )) ) {
+	if ( !/\./.test( url ) || (/^(\w+)./.test( url ) && !/\//.test( url ) && !/.js$/.test( url )) ) {
 		url = url.replace(/^(\w+)./, function(all, name) {
 			return (jQuery.require.namespace[ name ] || name) + "/";
 		}).replace(/\./g, "/") + ".js";

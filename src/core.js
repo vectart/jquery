@@ -32,6 +32,9 @@ var jQuery = function( selector, context ) {
 	// Match a standalone tag
 	rsingleTag = /^<(\w+)\s*\/?>(?:<\/\1>)?$/,
 
+	// Match portions of a URL
+	rurl = /^(\w+:)?\/\/([^\/?#]+)/,
+
 	// Keep a UserAgent string for use with jQuery.browser
 	userAgent = navigator.userAgent.toLowerCase(),
 	
@@ -40,7 +43,10 @@ var jQuery = function( selector, context ) {
 	
 	// The functions to execute on DOM ready
 	readyList = [],
-
+	
+	// The queue of required scripts currently being loaded
+	requireQueue = [],
+	
 	// Save a reference to some core methods
 	toString = Object.prototype.toString,
 	hasOwnProperty = Object.prototype.hasOwnProperty,
@@ -354,22 +360,7 @@ jQuery.extend({
 			// Remember that the DOM is ready
 			jQuery.isReady = true;
 
-			// If there are functions bound, to execute
-			if ( readyList ) {
-				// Execute all of them
-				var fn, i = 0;
-				while ( (fn = readyList[ i++ ]) ) {
-					fn.call( document, jQuery );
-				}
-
-				// Reset the list of functions
-				readyList = null;
-			}
-
-			// Trigger any bound ready events
-			if ( jQuery.fn.triggerHandler ) {
-				jQuery( document ).triggerHandler( "ready" );
-			}
+			readyReady();
 		}
 	},
 	
@@ -439,6 +430,110 @@ jQuery.extend({
 				}
 			}
 		}
+	},
+	
+	require: function( options ) {
+		var xhr, requestDone, ival, head, script, 
+			length = arguments.length - 1,
+			callback = arguments[ length ];
+
+		if ( length > 1 ) {
+			if ( !jQuery.isFunction( callback ) ) {
+				callback = null;
+				length = arguments.length;
+			}
+			
+			for ( var i = 0; i < length; i++ ) {
+				jQuery.require( arguments[i], callback );
+			}
+
+			return;
+		}
+
+		if ( options && !options.url ) {
+			options = { url: options, success: callback };
+		}
+
+		options.url = jQuery.require.urlFilter( options.url );
+
+		if ( !options || jQuery.requireCache[ options.url ] != null ) {
+			return;
+		}
+
+		requireQueue.push( options );
+		jQuery.requireCache[ options.url ] = false;
+
+		// If the DOM ready event has already occurred, we need to go synchronous
+		if ( !jQuery.isRemote( options.url ) ) {
+			xhr = window.ActiveXObject ?
+				new ActiveXObject("Microsoft.XMLHTTP") :
+				new XMLHttpRequest(),
+			
+			xhr.open( "GET", options.url, !jQuery.isReady );
+			xhr.send( null );
+
+			function checkDone() {
+				if ( !requestDone && xhr && xhr.readyState === 4 ) {
+					requestDone = true;
+
+					// clear poll interval
+					if ( ival ) {
+						clearInterval( ival );
+						ival = null;
+					}
+
+					execRequire( options.url, xhr.responseText, callback );
+				}
+			}
+
+			if ( jQuery.isReady ) {
+				checkDone();
+			} else {
+				ival = setInterval( checkDone, 13 );
+			}
+		
+		// Otherwise we can still load scripts asynchronously
+		} else {
+			head = document.getElementsByTagName("head")[0] || document.documentElement;
+			script = document.createElement("script");
+			
+			script.src = options.url;
+			
+			if ( options.scriptCharset ) {
+				script.charset = options.scriptCharset;
+			}
+
+			// Attach handlers for all browsers
+			script.onload = script.onreadystatechange = function() {
+				if ( !requestDone && (!this.readyState ||
+						this.readyState === "loaded" || this.readyState === "complete") ) {
+
+					requestDone = true;
+
+					// Handle memory leak in IE
+					script.onload = script.onreadystatechange = null;
+					
+					if ( head && script.parentNode ) {
+						head.removeChild( script );
+					}
+
+					execRequire( options.url, null, callback );
+				}
+			};
+			
+			// Use insertBefore instead of appendChild  to circumvent an IE6 bug.
+			// This arises when a base node is used (#2709 and #4378).
+			head.insertBefore( script, head.firstChild );
+		}
+	},
+
+	// Keep track of URLs that have been loaded
+	requireCache: {},
+
+	// Check to see if a URL is a remote URL
+	isRemote: function( url ) {
+		var parts = rurl.exec( url );
+		return parts && (parts[1] && parts[1] !== location.protocol || parts[2] !== location.host);
 	},
 
 	// See test/unit/core.js for details concerning isFunction.
@@ -653,13 +748,90 @@ if ( indexOf ) {
 // All jQuery objects should point back to these
 rootjQuery = jQuery(document);
 
+jQuery.require.urlFilter = function( url ) {
+	if ( !/\./.test( url ) || (/^(\w+)./.test( url ) && !/\//.test( url ) && !/.js$/.test( url )) ) {
+		url = url.replace(/^(\w+)./, function(all, name) {
+			return (jQuery.require.namespace[ name ] || name) + "/";
+		}).replace(/\./g, "/") + ".js";
+	}
+
+	return url;
+};
+
+jQuery.require.namespace = {};
+
+function readyReady() {
+	if ( jQuery.isReady && requireQueue.length === 0 ) {
+		// If there are functions bound, to execute
+		if ( readyList ) {
+			// Execute all of them
+			var fn, i = 0;
+			while ( (fn = readyList[ i++ ]) ) {
+				fn.call( document, jQuery );
+			}
+
+			// Reset the list of functions
+			readyList = null;
+			
+			// Trigger any bound ready events
+			if ( jQuery.fn.triggerHandler ) {
+				jQuery( document ).triggerHandler( "ready" );
+			}
+		}
+	}
+}
+
+function execRequire( url, script, callback ) {
+	var item, i, exec = true;
+
+	jQuery.requireCache[ url ] = true;
+
+	for ( i = 0; i < requireQueue.length; i++ ) {
+		item = requireQueue[i];
+
+		if ( item.url === url ) {
+			if ( script != null ) {
+				item.script = script;
+			} else {
+				next();
+				continue;
+			}
+
+		}
+
+		if ( exec && item.script ) {
+			jQuery.globalEval( item.script );
+			next();
+		} else {
+			exec = false;
+		}
+	}
+
+	if ( jQuery.isFunction( callback ) ) {
+		callback();
+	}
+
+	// Check to see if all scripts have been loaded
+	for ( var script in jQuery.requireCache ) {
+		if ( jQuery.requireCache[ script ] === false ) {
+			return;
+		}
+	}
+
+	readyReady();
+
+	function next() {
+		if ( jQuery.isFunction( item.callback ) ) {
+			item.callback();
+		}
+
+		requireQueue.splice( i--, 1 );
+	}
+}
+
 function evalScript( i, elem ) {
 	if ( elem.src ) {
-		jQuery.ajax({
-			url: elem.src,
-			async: false,
-			dataType: "script"
-		});
+		jQuery.require( elem.src );
 	} else {
 		jQuery.globalEval( elem.text || elem.textContent || elem.innerHTML || "" );
 	}

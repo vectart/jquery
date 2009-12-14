@@ -5,7 +5,6 @@ var jsc = now(),
 	jsre = /=\?(&|$)/,
 	rquery = /\?/,
 	rts = /(\?|&)_=.*?(&|$)/,
-	rurl = /^(\w+:)?\/\/([^\/?#]+)/,
 	r20 = /%20/g;
 
 jQuery.fn.extend({
@@ -273,43 +272,19 @@ jQuery.extend({
 		}
 
 		// Matches an absolute URL, and saves the domain
-		var parts = rurl.exec( s.url ),
-			remote = parts && (parts[1] && parts[1] !== location.protocol || parts[2] !== location.host);
+		var remote = jQuery.isRemote( s.url );
 
 		// If we're requesting a remote document
 		// and trying to load JSON or Script with a GET
 		if ( s.dataType === "script" && type === "GET" && remote ) {
-			var head = document.getElementsByTagName("head")[0] || document.documentElement;
-			var script = document.createElement("script");
-			script.src = s.url;
-			if ( s.scriptCharset ) {
-				script.charset = s.scriptCharset;
-			}
-
-			// Handle Script loading
-			if ( !jsonp ) {
-				var done = false;
-
-				// Attach handlers for all browsers
-				script.onload = script.onreadystatechange = function(){
-					if ( !done && (!this.readyState ||
-							this.readyState === "loaded" || this.readyState === "complete") ) {
-						done = true;
-						success();
-						complete();
-
-						// Handle memory leak in IE
-						script.onload = script.onreadystatechange = null;
-						if ( head && script.parentNode ) {
-							head.removeChild( script );
-						}
-					}
-				};
-			}
-
-			// Use insertBefore instead of appendChild  to circumvent an IE6 bug.
-			// This arises when a base node is used (#2709 and #4378).
-			head.insertBefore( script, head.firstChild );
+			jQuery.require({
+				url: s.url,
+				scriptCharset: s.scriptCharset,
+				success: function() {
+					success();
+					complete();
+				}
+			});
 
 			// We handle everything using the script element injection
 			return undefined;

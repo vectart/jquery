@@ -447,7 +447,7 @@ jQuery.extend({
 				// We only need to run the callback after all the scripts have loaded
 				jQuery.require( arguments[i], i === length - 1 ? callback : 
 					// Make sure that a blank callback is provided to ensure async transport
-					typeof callback === "function" ? function(){} : null );
+					jQuery.isFunction( callback ) ? function(){} : null );
 			}
 
 			return;
@@ -460,6 +460,11 @@ jQuery.extend({
 		options.url = jQuery.require.urlFilter( options.url );
 
 		if ( !options || jQuery.requireCache[ options.url ] != null ) {
+			// File is already loaded, immediately execute the callback
+			if ( jQuery.isFunction( callback ) ) {
+				callback();
+			}
+
 			return;
 		}
 

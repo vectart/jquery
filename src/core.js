@@ -444,7 +444,8 @@ jQuery.extend({
 			}
 			
 			for ( var i = 0; i < length; i++ ) {
-				jQuery.require( arguments[i], callback );
+				// We only need to run the callback after all the scripts have loaded
+				jQuery.require( arguments[i], i === length - 1 ? callback : null );
 			}
 
 			return;

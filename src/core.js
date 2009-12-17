@@ -445,7 +445,9 @@ jQuery.extend({
 			
 			for ( var i = 0; i < length; i++ ) {
 				// We only need to run the callback after all the scripts have loaded
-				jQuery.require( arguments[i], i === length - 1 ? callback : null );
+				jQuery.require( arguments[i], i === length - 1 ? callback : 
+					// Make sure that a blank callback is provided to ensure async transport
+					typeof callback === "function" ? function(){} : null );
 			}
 
 			return;

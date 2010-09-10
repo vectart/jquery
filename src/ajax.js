@@ -319,6 +319,8 @@ jQuery.extend({
 						if ( head && script.parentNode ) {
 							head.removeChild( script );
 						}
+						head = null;
+						script = null;
 					}
 				};
 			}
